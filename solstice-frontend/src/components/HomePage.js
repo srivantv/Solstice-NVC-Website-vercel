@@ -12,7 +12,7 @@ import {
   GridItem,
 } from "@chakra-ui/react";
 
-import img_member1 from "/Users/samarthpawan/Documents/Projects-code/Solstice-startup-project/Solstice-Platform/solstice-frontend/src/sam-solo.png";
+import img_member1 from "/Users/srivantv/Solstice-NVC-Website-vercel/solstice-frontend/src/sam-solo.png";
 
 const HomePage = () => {
   return (

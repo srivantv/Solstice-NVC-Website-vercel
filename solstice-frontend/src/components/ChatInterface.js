@@ -8,6 +8,11 @@ const ChatInterface = () => {
   const [loading, setLoading] = useState(false);
   const chatContainerRef = useRef(null);
 
+  // Replace with your OpenAI API key
+  const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
+
+  const USE_OPENAI_API = true; // Toggle to use OpenAI API or local server
+
   const handleKeyDown = (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -19,16 +24,43 @@ const ChatInterface = () => {
     if (!message) return;
 
     setLoading(true);
-    setChatHistory((prev) => [...prev, { user: message }]);
+    const newUserMessage = { role: "user", content: message };
+    const updatedChatHistory = [...chatHistory, newUserMessage];
+    setChatHistory(updatedChatHistory);
 
     try {
-      const response = await axios.post("http://localhost:8000/api/chat/", {
-        message,
-      });
-      setChatHistory((prev) => [
-        ...prev,
-        { user: message, bot: response.data.response },
-      ]);
+      let response;
+      if (USE_OPENAI_API) {
+        // Convert chat history for OpenAI API format
+        response = await axios.post(
+          "https://api.openai.com/v1/chat/completions",
+          {
+            model: "gpt-4o",
+            messages: updatedChatHistory,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const botMessage = {
+          role: "assistant",
+          content: response.data.choices[0].message.content,
+        };
+        setChatHistory((prev) => [...prev, botMessage]);
+      } else {
+        // Call local API server
+        response = await axios.post("http://localhost:8000/api/chat/", {
+          message,
+        });
+        const botMessage = {
+          role: "assistant",
+          content: response.data.response,
+        };
+        setChatHistory((prev) => [...prev, botMessage]);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
@@ -50,7 +82,7 @@ const ChatInterface = () => {
       display="flex"
       flexDirection="column"
       justifyContent="space-between"
-      h="90vh" // Full height of the viewport
+      h="90vh"
       p={5}
       bg="gray.50"
     >
@@ -68,17 +100,19 @@ const ChatInterface = () => {
           {chatHistory.map((chat, index) => (
             <Box
               key={index}
-              alignSelf={chat.bot ? "flex-start" : "flex-end"}
+              alignSelf={chat.role === "assistant" ? "flex-start" : "flex-end"}
               maxW="70%" // Limit message width
             >
               <Box
-                bg={chat.bot ? "blue.100" : "green.100"}
+                bg={chat.role === "assistant" ? "blue.100" : "green.100"}
                 p={3}
                 borderRadius="md"
                 boxShadow="sm"
               >
-                <Text fontWeight="bold">{chat.bot ? "Bot" : "You"}</Text>
-                <Text>{chat.bot || chat.user}</Text>
+                <Text fontWeight="bold">
+                  {chat.role === "assistant" ? "Bot" : "You"}
+                </Text>
+                <Text>{chat.content}</Text>
               </Box>
             </Box>
           ))}
